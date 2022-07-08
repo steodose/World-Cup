@@ -143,3 +143,31 @@ write_csv(rankings, "rankings.csv")
 
 ########################## World Cup Simulations ##############################
 
+groups <- c("A", "B", "C", "D", "E", "F", "H")
+
+wc_sims <- data.frame("country" = unique(c(fixtures$team, fixtures$opponent)),
+                      "group" = NA,
+                      "exp_pts" = 0,
+                      "exp_gf" = 0,
+                      "exp_gd" = 0,
+                      "first_in_group" = 0,
+                      "second_in_group" = 0,
+                      "third_in_group" = 0,
+                      "r16" = 0,
+                      "qtrs" = 0,
+                      "semis" = 0,
+                      "finals" = 0,
+                      "champ" = 0,
+                      stringsAsFactors = F)
+
+### function to find Group for a team
+find_group <- function(country) {
+    group <- filter(fixtures, team == country | opponent == country) %>%
+        slice(1) %>% 
+        pull(group)
+    return(group)
+}
+
+wc_sims$group <- unname(sapply(wc_sims$country, find_group))
+
+write_csv(wc_sims, "wc_sims.csv")

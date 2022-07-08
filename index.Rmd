@@ -2,8 +2,10 @@
 title: "Welcome"
 ---
 
-Who are the favorites to win the 2022 World Cup in Qatar? This website is the hom for my World Cup statisitcal simulations model. The KU Leuven DTAI Sports Analytics Lab executed a statistical simulation to answer these questions. Our simulation takes into account results of historical games to estimate each team's skill level and predict the odds of each country's performance. The probabilities are based on 10,000 simulations. 
+Who are the favorites to win the 2022 World Cup in Qatar? This website is the home for my World Cup statistical simulations model aimed at answering that questions. 
+
+The simulations takes into account results of historical games to estimate each team's strnegth and predict the odds of each country's performance this winter. The probabilities are based on 10,000 simulations of the upcoming World Cup. 
 
 Read more at my blog [Between the Pipes](https://betweenpipes.wordpress.com/).
 
-<img src="https://raw.githubusercontent.com/steodose/F1/master/F1_logo5.png" style="width:25%">
+<img src="https://raw.githubusercontent.com/steodose/World-Cup/main/2022_FIFA_World_Cup.png" style="width:25%">

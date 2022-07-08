@@ -1,0 +1,20 @@
+name: "Yay internet!"
+output_dir: "."
+navbar:
+  title: "2022 World Cup"
+  right:
+    - text: "About"
+      href: About.html
+    - icon: fa-home fa-lg
+      href: https://stephanteodosescu.com/      
+    - icon: fa-twitter fa-lg
+      href: https://twitter.com/steodosescu
+    - icon: fa-github fa-lg
+      href: https://github.com/steodose/F1
+    - icon: fa-wordpress fa-lg
+      href: https://betweenpipes.wordpress.com/
+output:
+  html_document:
+    theme: cosmo
+    include:
+      after_body: footer.html
