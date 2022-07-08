@@ -9,3 +9,5 @@ Repo for my 2022 World Cup predictions and analysis
 * wc_sims.csv: Up to date probabilities for each country to advance to each round of the World Cup.
 
 More to come...
+
+![World Cup Table](https://raw.githubusercontent.com/steodose/World-Cup/main/FIFA%20World%20Cup%20Rankings%20Table%20with%20Logo.png)
