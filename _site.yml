@@ -1,8 +1,10 @@
 name: "Yay internet!"
 output_dir: "."
 navbar:
-  title: "2022 World Cup"
+  title: "2022 World Cup Predictions"
   right:
+    - text: "Summary"
+      href: Summary.html
     - text: "About"
       href: About.html
     - icon: fa-home fa-lg

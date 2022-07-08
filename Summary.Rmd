@@ -17,7 +17,7 @@ knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 ```{r, echo =FALSE}
 
 library(tidyverse)
-library(wordlfootballR)
+library(worldfootballR)
 library(magick)
 library(cowplot)
 library(reactable)
@@ -42,8 +42,9 @@ library(extrafont)
 library(rvest)
 
 
-# Read in data 
+# Read in data from my Github
 
+sims <- read_csv("https://raw.githubusercontent.com/steodose/World-Cup/main/wc_sims.csv")
 
 ```
 
@@ -54,7 +55,7 @@ library(rvest)
 
 # Custom ggplot theme (inspired by Owen Phillips at the F5 substack blog)
 theme_custom <- function () { 
-    theme_minimal(base_size=11, base_family="Titillium Web") %+replace% 
+    theme_minimal(base_size=11, base_family="Chivo") %+replace% 
         theme(
             panel.grid.minor = element_blank(),
             plot.background = element_rect(fill = 'floralwhite', color = "floralwhite")
@@ -72,7 +73,7 @@ theme_538 <- function() {
     reactable::reactableTheme(
         searchInputStyle = list(width = "31%", backgroundColor = "#F9F9F9"),
         style = list(
-            fontFamily = "Titillium Web"
+            fontFamily = "Chivo"
         ),
         headerStyle = list(
             "&:hover[aria-sort]" = list(
@@ -91,6 +92,92 @@ theme_538 <- function() {
 
 ```{r, echo = FALSE}
 
-##### Data Processing #####
+## Create Reactable table
+
+# add in country flag logos to dataset
+sims <- sims %>% 
+   mutate(rank = row_number()) %>%
+  mutate('flag_logo' = paste0('https://raw.githubusercontent.com/steodose/World-Cup/main/flags/', country, '.png')) %>% 
+  relocate(rank, flag_logo) %>% 
+  arrange(desc(r16))
+
+summary_table <- reactable(
+  sims,
+  theme = theme_538,
+  columnGroups = list(
+                      colGroup(name = "Chance of Finishing in Group", 
+                               columns = c("first_in_group", "second_in_group", "third_in_group")),
+                      colGroup(name = "Knockout Stage Chances", 
+                               columns = c("r16", "qtrs", "semis", "finals", "champ"))
+                      ),
+
+                  showSortIcon = TRUE,
+                  searchable = TRUE,
+                  language = reactableLang(
+                      searchPlaceholder = "SEARCH FOR A TEAM"),
+                   defaultColDef = colDef(
+                     style = color_scales(sims, 
+                                          span = 11:15,
+                                          colors = paletteer::paletteer_d(
+                                               palette = "ggsci::amber_material")),
+                     minWidth = 70),
+                  defaultPageSize = 100,
+                  columns = list(
+                      rank = colDef(name = "Rank",
+                                       align = "left"),
+                      flag_logo = colDef(
+                          name = "",
+                          maxWidth = 40,
+                          align = "right",
+                          cell = embed_img(height = "25", width = "30")
+                      ),
+                      country = colDef(name = "Country",
+                                        minWidth = 120,
+                                       align = "center"),
+                      group = colDef(name = "Group",
+                                       align = "center"),
+                      exp_pts = colDef(name = "xPoints",
+                                         style = list(borderLeft = "2px solid #555"),
+                                       align = "right"),
+                      exp_gf = colDef(name = "xGF",
+                                       align = "right"),
+                      exp_gd = colDef(name = "xGD",
+                                      style = list(borderRight = "2px solid #555"),
+                                      align = "right",
+                                      format =  colFormat(digits = 0)),
+                      first_in_group = colDef(name = "1st Place",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right"),
+                      second_in_group = colDef(name = "2nd Place",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right"),
+                      third_in_group = colDef(name = "3rd Place",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                      style = list(borderRight = "2px solid #555"),
+                                       align = "right"),
+                      r16 = colDef(name = "R of 16",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right"),
+                      qtrs = colDef(name = "Qtrs",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right"),
+                      semis = colDef(name = "Semis",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right"),
+                      finals = colDef(name = "Finals",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right"),
+                      champ = colDef(name = "Champ",
+                                      format =  colFormat(percent = TRUE, digits = 0),
+                                       align = "right")
+        )
+  ) %>% 
+  add_title("2022 Men's World Cup Predictions",
+            font_size = 28) %>% 
+  add_subtitle("Click a column header to sort by that statistic.",
+               font_size = 14,
+               font_weight = "normal")
+
+summary_table
 
 ```

@@ -10,7 +10,7 @@ library(gridExtra)
 # Code and model inspired by Luke Benz's work from 2018 WC: https://lukebenz.com/post/wc_model_methodology/blogpost/
 
 ### Load dataset and data cleansing
-x <- read_csv("results.csv") #accessed from Kaggle on April 28, 2022: https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017
+x <- read_csv("results.csv") #accessed from Kaggle on July 7, 2022: https://www.kaggle.com/datasets/martj42/international-football-results-from-1872-to-2017
 n <- nrow(x)
 x$date <- as.Date(x$date,"%Y-%m-%d")
 x$days_since <- as.numeric(Sys.Date() - x$date)
