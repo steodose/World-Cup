@@ -10,4 +10,4 @@ Repo for my 2022 World Cup predictions and analysis
 
 More to come...
 
-[World Cup Table](FIFA World Cup Rankings Table with Logo.png)
+![World Cup Table](FIFA World Cup Rankings Table with Logo.png)
