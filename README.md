@@ -10,4 +10,4 @@ Repo for my 2022 World Cup predictions and analysis
 
 More to come...
 
-![World Cup Table](FIFA World Cup Rankings Table with Logo.png)
+![World Cup Table](https://raw.githubusercontent.com/steodose/World-Cup/main/FIFA%20World%20Cup%20Rankings%20Table%20with%20Logo.png)
