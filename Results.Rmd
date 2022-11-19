@@ -1,0 +1,53 @@
+date: 'Last updated: `r format(Sys.Date())`'
+output:
+  html_document:
+    dpi: 500
+    fig_width: 10
+    fig_height: 7
+---
+
+```{r setup, include=FALSE, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+```
+
+
+
+```{r, echo =FALSE}
+
+library(tidyverse)
+library(worldfootballR)
+library(magick)
+library(cowplot)
+library(reactable)
+library(reactablefmtr)
+library(gt) #for 538-themed tables
+library(gtExtras)
+library(glue)
+library(ggtext)
+library(rlang)
+library(RCurl)
+library(ggimage) #for working with logos
+library(zoo)
+library(janitor)
+library(prismatic)
+library(gghighlight)
+library(RColorBrewer)
+library(ggsci)
+library(scales)
+library(jsonlite)
+library(httr)
+library(extrafont)
+library(rvest)
+
+
+# Read in data from worldfootballR: https://jaseziv.github.io/worldfootballR/articles/fbref-data-internationals.html
+
+# World Cup results
+wc_results <- fb_match_results(country = "", gender = "M", season_end_year = 2018, tier = "", non_dom_league_url = "https://fbref.com/en/comps/1/history/World-Cup-Seasons")
+
+
+wc_results <- read_csv("https://raw.githubusercontent.com/martj42/international_results/master/results.csv")
+
+
+
+```

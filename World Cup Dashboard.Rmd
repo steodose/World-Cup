@@ -1,0 +1,364 @@
+---
+title: "FIFA World Cup Dashboard"
+runtime: shiny
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    theme: cosmo
+    logo: favicon_32x32.png
+    favicon: favicon_32x32.png
+    social: [ "twitter", "linkedin", "menu" ]
+---
+
+<style>                     
+.navbar {
+  background-color:#56042C;
+  border-color:white;
+}
+.navbar-brand {
+color:white!important;
+}
+</style>   
+
+<style type="text/css">
+
+.chart-title {  /* chart_title  */
+   font-size: 15px
+
+</style>
+
+
+```{r global, include = FALSE}
+
+library(flexdashboard)
+library(shiny)
+library(plotly)
+library(reactable)
+library(reactablefmtr)
+library(worldfootballR)
+library(tidyverse)
+library(rvest)
+library(teamcolors) # NFL team colors and logos
+library(extrafont)
+library(gt)
+library(gtExtras)
+library(ggimage)
+library(animation)
+library(DBI)
+library(RSQLite)
+library(glue)
+library(ggtext)
+library(scales)
+
+## Setup steps
+
+# Optional but makes R prefer not to display numbers in scientific notation
+options(scipen = 9999)
+
+# Custom ggplot theme (inspired by Owen Phillips at the F5 substack blog)
+theme_custom <- function () { 
+  theme_minimal(base_size=11, base_family="Chivo") %+replace% 
+    theme(
+      panel.grid.minor = element_blank(),
+      plot.background = element_rect(fill = 'transparent', color = "transparent")
+    )
+}
+
+
+# Define 538 table theme for Reactable table(s) below
+theme_538 <- function() {
+    reactable::reactableTheme(
+        searchInputStyle = list(width = "31%", backgroundColor = "#F9F9F9"),
+        style = list(
+            fontFamily = "Chivo"
+        ),
+        headerStyle = list(
+            "&:hover[aria-sort]" = list(
+                background = "hsl(0, 0%, 80%)"),
+            "&[aria-sort='ascending'], &[aria-sort='descending']" = list(
+                background = "#555",
+                color = "#FFF"
+            ),
+            borderColor = "#333"
+        ),
+        borderColor = "#CDCDCD"
+    )
+}
+
+
+
+## Load data
+
+# kaggle dataset for every international match
+wc_results <- read_csv("https://raw.githubusercontent.com/martj42/international_results/master/results.csv")
+
+
+# scrape vegasinsider for WC probabilities
+viURL <- "https://www.vegasinsider.com/soccer/odds/world-cup/"
+
+vi_raw <- viURL %>% 
+    rvest:: read_html() %>% 
+    rvest::html_nodes(".page-main-content li") %>%
+    rvest::html_text()
+
+vi_clean <- vi_raw %>% 
+    as_tibble() %>% 
+    slice(1:32) #only need team win total data from this text
+
+vi_clean <- vi_clean %>% 
+    extract(value, 
+            into = c("team", "champ_odds"),
+            # regex matching for any amount of consecutive non-digits at the start
+            regex = "(^\\D+)(.*)", 
+            convert = TRUE
+    )
+
+vi_clean$team <- str_remove(vi_clean$team, "[+]")
+vi_clean$team <- str_remove(vi_clean$team, "[-]")
+
+# create implied odds calculation
+vi_clean <- vi_clean %>% 
+    type_convert() %>%
+  mutate(implied_odds = 1-champ_odds/(champ_odds+100))
+
+
+# join groups and flags data
+
+groups <- read_csv("Groups.csv")
+
+wc_probs <- left_join(vi_clean, groups, by = c("team" = "Team"))
+
+wc_probs <- wc_probs %>%
+    mutate(rank = row_number()) %>%
+  mutate('flag_logo' = paste0('https://raw.githubusercontent.com/steodose/World-Cup/main/flags/', team, '.png')) %>%
+  relocate(rank, flag_logo, team, group) 
+
+
+```
+
+Inputs {.sidebar}
+-----------------------------------------------------------------------
+
+``` {r}
+
+
+```
+
+Choose a squad
+
+
+Row
+-----------------------------------------------------------------------
+
+### World Cup Probability {data-width=500}
+    
+```{r}
+
+# Reactable table setup
+
+wc_probs_table <- reactive({
+  wc_probs %>%
+        select(rank, flag_logo, team, group, implied_odds)
+    })
+
+
+# render table
+renderReactable({
+  reactable(wc_probs_table(),
+  theme = theme_538,
+                  showSortIcon = TRUE,
+                  searchable = TRUE,
+                  language = reactableLang(
+                      searchPlaceholder = "Search for a team"),
+                  defaultPageSize = 100,
+                  columns = list(
+                      rank = colDef(name = "Rank",
+                                       align = "center"),
+                      team = colDef(name = "Team",
+                                    minWidth = 150,
+                                       align = "right"),
+                      group = colDef(name = "Group",
+                                     style = list(borderLeft = "2px solid #555"),
+                                     align = "right"),
+                      implied_odds = colDef(name = "Implied Odds",
+                                            minWidth = 100,
+                                            style = color_scales(wc_probs, colors = paletteer::paletteer_d(
+                                               palette = "ggsci::amber_material")),
+                                            format =  colFormat(percent = TRUE, digits = 1),
+                                            align = "right"),
+                      
+                      ### add logos using embed_img()
+                      flag_logo = colDef(
+                          name = "",
+                          maxWidth = 40,
+                          align = "right",
+                          cell = embed_img(height = "25", width = "30")
+                      )),
+  
+                  pagination = FALSE,
+                  compact = TRUE, 
+                  borderless = FALSE, 
+                  striped = FALSE,
+                  fullWidth = FALSE, 
+                  defaultColDef = colDef(align = "center", minWidth = 95)
+        ) %>% 
+  add_title("2022 FIFA World Cup Odds",
+            font_size = 28) %>% 
+  add_subtitle("Odds courtesy of Bet365. Click a column header to sort by that statistic.",
+               font_size = 14,
+               font_weight = "normal") %>% 
+  add_source("Data: Bet365/vegasinsider.com")
+  
+})
+
+
+```
+
+
+### Goals {data-width=500}
+    
+```{r}
+
+# load matches
+
+matches <- read_csv("https://projects.fivethirtyeight.com/soccer-api/international/2022/wc_matches.csv")
+
+#create unique match ids
+matches <- matches |> 
+    mutate(unique_match_id = str_c(team1, team2, sep = "-"))
+
+# make GS vs GC plot
+
+
+
+
+
+
+```
+
+
+
+Row {.tabset}
+-----------------------------------------------------------------------
+
+### All Matches
+    
+```{r}
+
+
+# join in team logos for inclusion in table
+all_matches <- matches %>%
+    mutate(match = row_number()) %>%
+  mutate('flag_logo1' = paste0('https://raw.githubusercontent.com/steodose/World-Cup/main/flags/', team1, '.png'),
+         'flag_logo2' = paste0('https://raw.githubusercontent.com/steodose/World-Cup/main/flags/', team2, '.png')) %>%
+  select(match, date, flag_logo1, team1, flag_logo2, team2, prob1, prob2, probtie, score1, score2)
+
+
+#set up table for reactable
+all_matches_react <- reactive({
+  all_matches %>%
+        select(match, date, flag_logo1, team1, flag_logo2, team2, prob1, prob2, probtie, score1, score2)
+    })
+
+
+# render table
+renderReactable({
+  reactable(all_matches_react(),
+  theme = theme_538,
+                  showSortIcon = TRUE,
+                  searchable = TRUE,
+                  language = reactableLang(
+                      searchPlaceholder = "Search for a team"),
+                  defaultPageSize = 100,
+                  columns = list(
+                      match = colDef(name = "Match",
+                                       align = "center"),
+                      date = colDef(name = "Match",
+                                    minWidth = 120,
+                                       align = "center"),
+                      team1 = colDef(name = "Home",
+                                    minWidth = 120,
+                                       align = "right"),
+                      team2 = colDef(name = "Away",
+                                    minWidth = 120,
+                                       align = "right"),
+                      prob1 = colDef(name = "Home Odds",
+                                            minWidth = 100,
+                                            style = color_scales(all_matches, colors = paletteer::paletteer_d(
+                                               palette = "ggsci::amber_material")),
+                                            format =  colFormat(percent = TRUE, digits = 1),
+                                            align = "right"),
+                       prob2 = colDef(name = "Away Odds",
+                                            minWidth = 100,
+                                            style = color_scales(all_matches, colors = paletteer::paletteer_d(
+                                               palette = "ggsci::amber_material")),
+                                            format =  colFormat(percent = TRUE, digits = 1),
+                                            align = "right"),
+                       probtie = colDef(name = "Tie Odds",
+                                            minWidth = 100,
+                                            style = color_scales(all_matches, colors = paletteer::paletteer_d(
+                                               palette = "ggsci::amber_material")),
+                                            format =  colFormat(percent = TRUE, digits = 1),
+                                            align = "right"),
+                      score1 = colDef(name = "Home Score",
+                                    minWidth = 80,
+                                       align = "right"),
+                      score2 = colDef(name = "Away Score",
+                                    minWidth = 80),
+                      
+                      ### add logos using embed_img()
+                      flag_logo1 = colDef(
+                          name = "",
+                          maxWidth = 40,
+                          align = "right",
+                          cell = embed_img(height = "25", width = "30")
+                      ),
+                      flag_logo2 = colDef(
+                          name = "",
+                          maxWidth = 40,
+                          align = "right",
+                          cell = embed_img(height = "25", width = "30")
+                      )),
+  
+                  pagination = FALSE,
+                  compact = TRUE, 
+                  borderless = FALSE, 
+                  striped = FALSE,
+                  fullWidth = FALSE, 
+                  defaultColDef = colDef(align = "center", minWidth = 95)
+        ) %>% 
+  add_title("2022 FIFA World Cup Matches",
+            font_size = 28) %>% 
+  add_subtitle("Odds courtesy of FiveThirtyEight. Click a column header to sort by that statistic.",
+               font_size = 14,
+               font_weight = "normal") %>% 
+  add_source("Data: Bet365/vegasinsider.com")
+  
+})
+
+
+```
+
+
+
+### About
+
+**World Cup Dashboard**
+
+This dashboard looks at individual NFL game win probability. It uses play-by-play data from Ben Baldwin and Sebastian Carl’s nflfastR package.  nflfastR is an extension of the original work done by the nflscrapR team (Maksim Horowitz, Ron Yurko, and Sam Ventura). App created by [Stephan Teodosescu](https://stephanteodosescu.com/personal-website/).
+
+
+**What is Win Probability?**
+
+Win Probability (WP) is an estimate of a team’s likelihood of winning the game at a point in time given the current situation at the start of that play. Win Probability Added (WPA) is the change in WP from one play to the next. If you graph these WP changes throughout the course of the game you will get a visual representation of how that game played out. The nflfastR model uses logistic regression to model likelihood of winning after each play of the game based on the score, field position, home field advantage, distance to the first down, time remaining, etc.
+
+**How do we measure game excitement?**
+
+To measure how exciting an individual game is, I computed a Game Excitement Index (GEI) similar to what [Luke Benz](https://www.midmajormadness.com/2019/12/30/21041851/win-probability-charts-2019-game-excitement-index-college-basketball) has done in college basketball. The approach is to sum the absolute value of the win probability change from each play and multiply by a normalized time parameter. This gives us an index by which we can rank each game’s excitement factor. The way to interpret, for example, a Game Excitement Index of 4.0 is that the win probability changed by a total of 400% over the course of that game. The higher the number, the more exciting the game.
+
+GEI is not a perfect metric, and it might fail to capture important aspects of the game that fans might find exciting, but it does give us a sense of the flow of games and a way to quantify the excitement of playoff football. I wrote about this idea at my blog [Between the Pipes](https://between-the-pipes.com/2022/01/29/divisional-round-was-one-of-the-most-exciting-weekends-in-nfl-history/) in January 2022. 
+
+More on these metrics and the models underpinning them can be found at [Open Source Football](https://www.opensourcefootball.com/posts/2020-09-28-nflfastr-ep-wp-and-cp-models/).
+
+
